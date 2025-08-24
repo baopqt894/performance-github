@@ -1,0 +1,73 @@
+{{!-- views/performance.hbs --}}
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="/style.css"/>
+  <style>
+    .grid { display:grid; grid-template-columns: 2fr 1fr; gap:16px; }
+    @media (max-width: 900px) { .grid{ grid-template-columns: 1fr; } }
+    .chart-card{ height: 420px; padding: 16px; }
+    .filters{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px }
+    .filters input{ height:38px; border-radius:12px; border:1px solid #1f2937; background:#0b1222; color:#e5e7eb; padding:0 12px }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">Performance: {{since}} → {{until}}</div>
+      <form class="filters" method="get">
+        <input type="date" name="since" value="{{since}}"/>
+        <input type="date" name="until" value="{{until}}"/>
+        <button class="btn btn-primary">Xem</button>
+        <a class="btn" href="/performance/sync?since={{since}}&until={{until}}">↻ Sync Range</a>
+      </form>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Developer</th>
+                <th>Commits</th>
+                <th>PRs</th>
+                <th>Issues</th>
+                <th>Reviews</th>
+                <th>Additions</th>
+                <th>Deletions</th>
+                <th>Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each developers}}
+              <tr>
+                <td>{{this.login}}</td>
+                <td>{{this.commits}}</td>
+                <td>{{this.prs}}</td>
+                <td>{{this.issues}}</td>
+                <td>{{this.reviews}}</td>
+                <td>{{this.additions}}</td>
+                <td>{{this.deletions}}</td>
+                <td><b>{{this.score}}</b></td>
+              </tr>
+              {{/each}}
+              {{#unless developers.length}}
+              <tr><td colspan="8" style="color:#94a3b8">Không có dữ liệu</td></tr>
+              {{/unless}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card chart-card">
+        <canvas id="scoreChart" width="400" height="400"></canvas>
+      </div>
+    </div>
+  </div>
+
+  {{{scripts}}}
+</body>
+</html>
