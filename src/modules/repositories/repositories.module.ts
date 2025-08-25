@@ -10,5 +10,6 @@ import { RepositoryEntity } from './entities/repository.entity';
   imports: [HttpModule, TypeOrmModule.forFeature([RepositoryEntity])],
   controllers: [RepositoriesController],
   providers: [RepositoriesService],
+  exports: [RepositoriesService],
 })
 export class RepositoriesModule {}

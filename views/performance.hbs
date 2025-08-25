@@ -6,67 +6,459 @@
   <title>{{title}}</title>
   <link rel="stylesheet" href="/style.css"/>
   <style>
-    .grid { display:grid; grid-template-columns: 2fr 1fr; gap:16px; }
-    @media (max-width: 900px) { .grid{ grid-template-columns: 1fr; } }
-    .chart-card{ height: 420px; padding: 16px; }
-    .filters{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px }
-    .filters input{ height:38px; border-radius:12px; border:1px solid #1f2937; background:#0b1222; color:#e5e7eb; padding:0 12px }
+    body { 
+      background: #f8fafc; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .header { 
+      background: #3b82f6; 
+      color: white; 
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .title { 
+      font-size: 24px; 
+      font-weight: 600; 
+      margin: 0;
+    }
+    .filters { 
+      display: flex; 
+      gap: 8px; 
+      flex-wrap: wrap; 
+      align-items: center;
+    }
+    .filters input { 
+      height: 38px; 
+      border-radius: 6px; 
+      border: 1px solid #d1d5db; 
+      background: white; 
+      color: #374151; 
+      padding: 0 12px;
+      font-size: 14px;
+    }
+    .btn { 
+      height: 40px; 
+      padding: 0 16px; 
+      border-radius: 6px; 
+      border: none; 
+      font-size: 14px; 
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-primary { 
+      background: #1d4ed8; 
+      color: white; 
+    }
+    .btn-primary:hover { 
+      background: #1e40af; 
+    }
+    .btn { 
+      background: rgba(255,255,255,0.2); 
+      color: white; 
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .btn:hover { 
+      background: rgba(255,255,255,0.3); 
+    }
+
+    /* Added top 3 winners section styling */
+    .winners-section {
+      padding: 32px 24px;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .winners-title {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 24px;
+    }
+    .winners-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .winner-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      border: 2px solid transparent;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .winner-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    .winner-card.first { border-color: #fbbf24; }
+    .winner-card.second { border-color: #9ca3af; }
+    .winner-card.third { border-color: #f59e0b; }
+    .winner-rank {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+      color: white;
+    }
+    .winner-rank.first { background: #fbbf24; }
+    .winner-rank.second { background: #9ca3af; }
+    .winner-rank.third { background: #f59e0b; }
+    .winner-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      border: 3px solid #e5e7eb;
+    }
+    .winner-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+    .winner-score {
+      font-size: 24px;
+      font-weight: 700;
+      color: #3b82f6;
+      margin-bottom: 12px;
+    }
+    .winner-stats {
+      display: flex;
+      justify-content: space-around;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .winner-stat {
+      text-align: center;
+    }
+    .winner-stat-value {
+      display: block;
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    /* Updated table styling to match reference design */
+    .rankings-section {
+      padding: 24px;
+    }
+    .rankings-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 20px;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+    th {
+      background: #f9fafb;
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 14px;
+      color: #374151;
+    }
+    tr:hover {
+      background: #f9fafb;
+      cursor: pointer;
+    }
+    .member-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .member-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid #e5e7eb;
+    }
+    .member-name {
+      font-weight: 500;
+      color: #1f2937;
+    }
+    .rank-number {
+      font-weight: 600;
+      color: #6b7280;
+      width: 40px;
+    }
+    .performance-score {
+      font-weight: 700;
+      color: #3b82f6;
+    }
+
+    /* Added modal styling for member details */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .modal-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 3px solid #e5e7eb;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #6b7280;
+    }
+    .detail-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .detail-stat {
+      text-align: center;
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    .detail-stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #3b82f6;
+    }
+    .detail-stat-label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .winners-grid {
+        grid-template-columns: 1fr;
+      }
+      .table-wrap {
+        font-size: 12px;
+      }
+      th, td {
+        padding: 8px 12px;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="title">Performance: {{since}} → {{until}}</div>
+      <h1 class="title">Team Performance Rankings</h1>
       <form class="filters" method="get">
         <input type="date" name="since" value="{{since}}"/>
         <input type="date" name="until" value="{{until}}"/>
-        <button class="btn btn-primary">Xem</button>
-        <a class="btn" href="/performance/sync?since={{since}}&until={{until}}">↻ Sync Range</a>
+        <button class="btn btn-primary">View</button>
+        <a class="btn" href="/performance/sync?since={{since}}&until={{until}}">↻ Sync</a>
       </form>
     </div>
 
-    <div class="grid">
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Developer</th>
-                <th>Commits</th>
-                <th>PRs</th>
-                <th>Issues</th>
-                <th>Reviews</th>
-                <th>Additions</th>
-                <th>Deletions</th>
-                <th>Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{#each developers}}
-              <tr>
-                <td>{{this.login}}</td>
-                <td>{{this.commits}}</td>
-                <td>{{this.prs}}</td>
-                <td>{{this.issues}}</td>
-                <td>{{this.reviews}}</td>
-                <td>{{this.additions}}</td>
-                <td>{{this.deletions}}</td>
-                <td><b>{{this.score}}</b></td>
-              </tr>
-              {{/each}}
-              {{#unless developers.length}}
-              <tr><td colspan="8" style="color:#94a3b8">Không có dữ liệu</td></tr>
-              {{/unless}}
-            </tbody>
-          </table>
-        </div>
+    <!-- Added top 3 winners section -->
+    {{#if data}}
+    <div class="winners-section">
+      <h2 class="winners-title">🏆 Top Performers</h2>
+      <div class="winners-grid">
+        {{#each data}}
+          {{#ifCond @index '<' 3}}
+          <div class="winner-card {{#eq @index 0}}first{{/eq}}{{#eq @index 1}}second{{/eq}}{{#eq @index 2}}third{{/eq}}" onclick="showMemberDetails('{{this.username}}', '{{this.avatar}}', {{this.performance}}, {{this.commitCount}}, {{this.prCount}}, {{this.reviewCount}})">
+            <div class="winner-rank {{#eq @index 0}}first{{/eq}}{{#eq @index 1}}second{{/eq}}{{#eq @index 2}}third{{/eq}}">{{add @index 1}}</div>
+            <img src="{{this.avatar}}" alt="{{this.username}}" class="winner-avatar">
+            <div class="winner-name">{{this.username}}</div>
+            <div class="winner-score">{{this.performance}} points</div>
+            <div class="winner-stats">
+              <div class="winner-stat">
+                <span class="winner-stat-value">{{this.commitCount}}</span>
+                <div>Commits</div>
+              </div>
+              <div class="winner-stat">
+                <span class="winner-stat-value">{{this.prCount}}</span>
+                <div>PRs</div>
+              </div>
+              <div class="winner-stat">
+                <span class="winner-stat-value">{{this.reviewCount}}</span>
+                <div>Reviews</div>
+              </div>
+            </div>
+          </div>
+          {{/ifCond}}
+        {{/each}}
       </div>
+    </div>
+    {{/if}}
 
-      <div class="card chart-card">
-        <canvas id="scoreChart" width="400" height="400"></canvas>
+    <!-- Updated rankings table with avatars and better styling -->
+    <div class="rankings-section">
+      <h3 class="rankings-title">Complete Rankings</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Developer</th>
+              <th>Performance</th>
+              <th>Commits</th>
+              <th>PRs</th>
+              <th>Reviews</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each data}}
+            <tr onclick="showMemberDetails('{{this.username}}', '{{this.avatar}}', {{this.performance}}, {{this.commitCount}}, {{this.prCount}}, {{this.reviewCount}})">
+              <td class="rank-number">{{add @index 1}}</td>
+              <td>
+                <div class="member-info">
+                  <img src="{{this.avatar}}" alt="{{this.username}}" class="member-avatar">
+                  <span class="member-name">{{this.username}}</span>
+                </div>
+              </td>
+              <td class="performance-score">{{this.performance}}</td>
+              <td>{{this.commitCount}}</td>
+              <td>{{this.prCount}}</td>
+              <td>{{this.reviewCount}}</td>
+            </tr>
+            {{/each}}
+            {{#unless data.length}}
+            <tr><td colspan="6" style="color:#94a3b8; text-align: center; padding: 40px;">No data available</td></tr>
+            {{/unless}}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
+
+  <!-- Added modal for member details -->
+  <div id="memberModal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeMemberDetails()">&times;</button>
+      <div class="modal-header">
+        <img id="modalAvatar" src="/placeholder.svg" alt="" class="modal-avatar">
+        <div>
+          <h3 id="modalName"></h3>
+          <p id="modalScore" style="color: #3b82f6; font-weight: 600; margin: 0;"></p>
+        </div>
+      </div>
+      <div class="detail-stats">
+        <div class="detail-stat">
+          <div id="modalCommits" class="detail-stat-value">0</div>
+          <div class="detail-stat-label">Commits</div>
+        </div>
+        <div class="detail-stat">
+          <div id="modalPRs" class="detail-stat-value">0</div>
+          <div class="detail-stat-label">Pull Requests</div>
+        </div>
+        <div class="detail-stat">
+          <div id="modalReviews" class="detail-stat-value">0</div>
+          <div class="detail-stat-label">Code Reviews</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showMemberDetails(username, avatar, performance, commits, prs, reviews) {
+      document.getElementById('modalName').textContent = username;
+      document.getElementById('modalAvatar').src = avatar;
+      document.getElementById('modalAvatar').alt = username;
+      document.getElementById('modalScore').textContent = performance + ' points';
+      document.getElementById('modalCommits').textContent = commits;
+      document.getElementById('modalPRs').textContent = prs;
+      document.getElementById('modalReviews').textContent = reviews;
+      document.getElementById('memberModal').classList.add('active');
+    }
+
+    function closeMemberDetails() {
+      document.getElementById('memberModal').classList.remove('active');
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('memberModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeMemberDetails();
+      }
+    });
+  </script>
 
   {{{scripts}}}
 </body>

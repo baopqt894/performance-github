@@ -10,6 +10,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GitHubModule } from './modules/github/github.module';
+import { StatModule } from './modules/stat/stat.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -36,11 +37,13 @@ import { GitHubModule } from './modules/github/github.module';
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
+      exclude: ['/performance*', '/stat*', '/api*'],
     }),
     OrganizationModule,
     MembersModule,
     RepositoriesModule,
-    GitHubModule
+    GitHubModule,
+    StatModule
   ],
   controllers: [AppController],
   providers: [AppService],
