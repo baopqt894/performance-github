@@ -25,9 +25,13 @@ export class GitHubUtils {
       const res = await this.client.get<T[]>(url, {
         params: { ...params, per_page: 100, page },
       });
+    
       results = results.concat(res.data);
+      console.log(`results:`,results);
       if (res.data.length < 100) break; // hết dữ liệu
       page++;
+      // Thêm delay 500ms giữa các lần gọi API để tránh bị rate limit
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     return results;
