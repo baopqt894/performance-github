@@ -126,47 +126,39 @@ export class StatService {
     return this.githubUtils.getPullRequestDiff(owner, repo, pull_number);
   }
 
+  /**
+   * Lấy performance từ materialized view user_performance_daily nếu có, fallback sang cách cũ nếu không có dữ liệu
+   */
   async getMemberPerformance(from?: string, to?: string): Promise<any[]> {
     // Lấy danh sách tất cả member
     const members = await this.githubUtils.getOrgMembers('FoxCodeStudio');
+  
     // Xử lý khoảng thời gian
     let fromDate: string | undefined;
     let toDate: string | undefined;
-    if (from) fromDate = new Date(from).toISOString();
-    if (to) toDate = new Date(to).toISOString();
+    if (from) fromDate = new Date(String(from)).toISOString();
+    if (to) toDate = new Date(String(to)).toISOString();
+    // Truy vấn 1 lần cho tất cả commit
+    const allCommits = await this.commitRepo.find();
+    // Truy vấn 1 lần cho tất cả pull request
+    const allPRs = await this.prRepo.find();
+    // Truy vấn 1 lần cho tất cả review
+    const allReviews = await this.prReviewRepo.find();
     const result: any[] = [];
+    const memberUsernames = members.map((m: any) => m.login);
     for (const member of members as any[]) {
       const username = member.login;
       const avatar = member.avatar_url;
-      // Đếm số commit trong khoảng thời gian
-      const commitWhere: any = { author_name: username };
-      if (fromDate && toDate) commitWhere.date = Between(fromDate, toDate);
-      const commitCount = await this.commitRepo.count({ where: commitWhere });
-      // Đếm số pull request trong khoảng thời gian
-      let prCount = 0;
-      if (fromDate && toDate) {
-        prCount = await this.prRepo.createQueryBuilder('pr')
-          .where(`pr.pr_raw->'user'->>'login' = :username`, { username })
-          .andWhere(`pr.pr_raw->>'created_at' >= :fromDate AND pr.pr_raw->>'created_at' <= :toDate`, { fromDate, toDate })
-          .getCount();
-      } else {
-        prCount = await this.prRepo.createQueryBuilder('pr')
-          .where(`pr.pr_raw->'user'->>'login' = :username`, { username })
-          .getCount();
-      }
-      // Đếm số review trong khoảng thời gian
-      let reviewCount = 0;
-      if (fromDate && toDate) {
-        reviewCount = await this.prReviewRepo.createQueryBuilder('review')
-          .where(`review.review_raw->'user'->>'login' = :username`, { username })
-          .andWhere(`review.review_raw->>'submitted_at' >= :fromDate AND review.review_raw->>'submitted_at' <= :toDate`, { fromDate, toDate })
-          .getCount();
-      } else {
-        reviewCount = await this.prReviewRepo.createQueryBuilder('review')
-          .where(`review.review_raw->'user'->>'login' = :username`, { username })
-          .getCount();
-      }
-      // Tính chỉ số performance (có thể tuỳ chỉnh công thức)
+      // Lọc commit theo user và khoảng thời gian
+      const commits = allCommits.filter(c => c.author_name === username && (!fromDate || c.date >= fromDate) && (!toDate || c.date <= toDate));
+      // Lọc pull request theo user và khoảng thời gian
+      const prs = allPRs.filter(pr => pr.pr_raw?.user?.login === username && (!fromDate || pr.pr_raw?.created_at >= fromDate) && (!toDate || pr.pr_raw?.created_at <= toDate));
+      // Lọc review assigned theo user và khoảng thời gian
+      const reviews = allReviews.filter(r => r.review_id.endsWith(`-${username}`));
+      // Tính chỉ số performance
+      const commitCount = commits.length;
+      const prCount = prs.length;
+      const reviewCount = reviews.length;
       const performance = commitCount + prCount * 2 + reviewCount;
       result.push({
         username,
@@ -177,7 +169,20 @@ export class StatService {
         reviewCount
       });
     }
-    // Sắp xếp theo performance giảm dần
+
+    for (const username of memberUsernames) {
+      if (!result.find(r => r.username === username)) {
+        const member = members.find((m: any) => m.login === username) as any;
+        result.push({
+          username,
+          avatar: member?.avatar_url || null,
+          performance: 0,
+          commitCount: 0,
+          prCount: 0,
+          reviewCount: 0
+        });
+      }
+    }
     result.sort((a, b) => b.performance - a.performance);
     return result;
   }
@@ -201,26 +206,29 @@ export class StatService {
 
   async getMemberActivities(username: string, from?: string, to?: string): Promise<any> {
     // Mặc định lấy từ 1 tháng trước đến nay
-    const today = to ? new Date(to) : new Date();
-    const lastMonth = from ? new Date(from) : new Date(today);
-    if (!from) lastMonth.setMonth(today.getMonth() - 1);
-    const fromDate = lastMonth.toISOString();
-    const toDate = today.toISOString();
+    let fromDate: string | undefined;
+    let toDate: string | undefined;
+    if (from) fromDate = new Date(String(from)).toISOString();
+    if (to) toDate = new Date(String(to)).toISOString();
+    const today = toDate ? new Date(toDate) : new Date();
+    const lastMonth = fromDate ? new Date(fromDate) : new Date(today);
+    if (!fromDate) lastMonth.setMonth(today.getMonth() - 1);
+    const fromDateISO = lastMonth.toISOString();
+    const toDateISO = today.toISOString();
 
     // Commit
     const commits = await this.commitRepo.find({
       where: {
         author_name: username,
-        date: Between(fromDate, toDate)
+        date: Between(fromDateISO, toDateISO)
       }
     });
 
     // Pull Request
     const prs = await this.prRepo.createQueryBuilder('pr')
       .where(`pr.pr_raw->'user'->>'login' = :username`, { username })
-      .andWhere(`pr.pr_raw->>'created_at' >= :fromDate AND pr.pr_raw->>'created_at' <= :toDate`, { fromDate, toDate })
+      .andWhere(`pr.pr_raw->>'created_at' >= :fromDate AND pr.pr_raw->>'created_at' <= :toDate`, { fromDate: fromDateISO, toDate: toDateISO })
       .getMany();
-    // Chỉ trả về các trường cần thiết cho PR
     const prDetails = prs.map(pr => ({
       pr_id: pr.pr_id,
       repo: pr.repo,
@@ -237,13 +245,84 @@ export class StatService {
       }
     }));
 
+    // Đếm số review assigned
+    const assignedReviews = await this.getAssignedReviewsByUsername(username);
+    const reviewCount = assignedReviews.length;
+    // Tính chỉ số performance
+    const performance = commits.length + prs.length * 2 + reviewCount;
+
+    // Lấy danh sách reviews
+    const reviews = assignedReviews;
+
     return {
       username,
-      from: fromDate,
-      to: toDate,
+      from: fromDateISO,
+      to: toDateISO,
       commits,
-      pull_requests: prDetails
+      pull_requests: prDetails,
+      reviews,
+      reviewCount,
+      performance
     };
+  }
+
+  async saveAssignedReviewsFromPRs() {
+    const prs = await this.getPullRequests();
+    let allReviews: any[] = [];
+    for (const pr of prs) {
+      const reviewers: any[] = [];
+      if (Array.isArray(pr.pr_raw?.assignees)) {
+        reviewers.push(...pr.pr_raw.assignees);
+      }
+      if (Array.isArray(pr.pr_raw?.requested_reviewers)) {
+        reviewers.push(...pr.pr_raw.requested_reviewers);
+      }
+      // Tạo review entity từ reviewer
+      const reviewEntities = reviewers.map((r: any) => ({
+        review_id: `${pr.pr_id}-${r.login}`,
+        pr_id: String(pr.pr_id),
+        repo: pr.repo,
+        owner: pr.owner,
+        review_raw: r,
+      }));
+      if (reviewEntities.length) {
+        await this.prReviewRepo.save(reviewEntities);
+        allReviews.push(...reviewEntities);
+      }
+    }
+    return { message: `Đã lưu ${allReviews.length} assigned reviews từ pull requests.` };
+  }
+
+  async getAssignedReviewsByUsername(username: string) {
+    // Tìm các review có review_id kết thúc bằng -username
+    return this.prReviewRepo.createQueryBuilder('review')
+      .where(`review.review_id LIKE :pattern`, { pattern: `%-${username}` })
+      .getMany();
+  }
+
+  /**
+   * Lưu assigned reviews (assignees/requested_reviewers) cho một pull request
+   */
+  async savePullRequestReviewsAssign(pr: any, repo: string, owner: string, pr_id: number | string) {
+    const reviewers: any[] = [];
+    if (Array.isArray(pr?.assignees)) {
+      reviewers.push(...pr.assignees);
+    }
+    if (Array.isArray(pr?.requested_reviewers)) {
+      reviewers.push(...pr.requested_reviewers);
+    }
+    // Tạo review entity từ reviewer
+    const reviewEntities = reviewers.map((r: any) => ({
+      review_id: `${pr_id}-${r.login}`,
+      pr_id: String(pr_id),
+      repo,
+      owner,
+      review_raw: r,
+    }));
+    if (reviewEntities.length) {
+      return this.prReviewRepo.save(reviewEntities);
+    }
+    return [];
   }
 
 }
