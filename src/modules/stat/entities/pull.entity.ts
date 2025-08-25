@@ -23,7 +23,7 @@ export class PullRequestReviewEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: string;
 
-  @Column('bigint')
+  @Column('varchar')
   review_id: string;
 
   @Column('bigint')

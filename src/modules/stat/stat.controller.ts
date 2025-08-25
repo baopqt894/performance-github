@@ -46,7 +46,7 @@ export class StatController {
 
   @Get('pull-request-reviews-by-author')
   async getPullRequestReviewsByAuthor(@Query('author') author: string) {
-    return this.statService.getPullRequestReviewsByAuthor(author);
+    return this.statService.getAssignedReviewsByUsername(author);
   }
 
   @Get('member-performance')
@@ -91,4 +91,6 @@ export class StatController {
     const toParsed = parseDate(to);
     return await this.statService.getMemberActivities(username, fromParsed, toParsed);
   }
+
+
 }

@@ -39,10 +39,11 @@ export class StatCron {
         log(`---\nBắt đầu xử lý repo: ${r.name}, owner: ${owner}`);
         try {
 
+          // Lấy dữ liệu từ ngày hôm qua đến hôm nay
           const today = new Date();
           const yesterday = new Date(today);
           yesterday.setDate(today.getDate() - 1);
-          const since = '2025-07-28T00:00:00Z'; // Ngày bắt đầu lấy dữ liệu
+          const since = yesterday.toISOString(); // Ngày bắt đầu lấy dữ liệu
           const until = today.toISOString();     // Ngày kết thúc là hiện tại
           // Lấy commit ở tất cả các nhánh
           let commits: any[] = [];
@@ -78,21 +79,14 @@ export class StatCron {
             log(`Lỗi lưu pull request cho repo ${r.name} (owner: ${owner}): ${err?.message || err}`);
           }
 
-          // Lấy và lưu review cho từng pull request
+          // Lấy và lưu review assign cho từng pull request
           for (const pr of prs as any[]) {
             try {
-              const reviews = await this.githubUtils.getPullRequestReviews(owner, r.name, pr.id || pr.number);
-              log(`Lấy review thành công cho PR ${pr.id || pr.number} của repo ${r.name} (owner: ${owner}), số lượng: ${reviews.length}`);
-              const reviewResult = await this.statService.savePullRequestReviews(reviews, r.name, owner, pr.id || pr.number);
-              log(`Đã lưu ${Array.isArray(reviewResult) ? reviewResult.length : 0} review cho PR ${pr.id || pr.number} của repo ${r.name} (owner: ${owner})`);
-              // Thêm delay giữa các lần gọi API để tránh rate limit
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              const reviewResult = await this.statService.savePullRequestReviewsAssign(pr, r.name, owner, pr.id || pr.number);
+              log(`Đã lưu ${Array.isArray(reviewResult) ? reviewResult.length : 0} assigned review cho PR ${pr.id || pr.number} của repo ${r.name} (owner: ${owner})`);
+              await new Promise(resolve => setTimeout(resolve, 500));
             } catch (err: any) {
-              if (err?.response?.status) {
-                log(`Lấy review thất bại cho PR ${pr.id || pr.number} của repo ${r.name} (owner: ${owner}) - status: ${err.response.status}`);
-              } else {
-                log(`Lấy review thất bại cho PR ${pr.id || pr.number} của repo ${r.name} (owner: ${owner}) - lỗi: ${err}`);
-              }
+              log(`Lỗi lưu assigned review cho PR ${pr.id || pr.number} của repo ${r.name} (owner: ${owner}): ${err?.message || err}`);
               continue;
             }
           }
