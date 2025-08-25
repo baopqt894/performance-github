@@ -11,6 +11,16 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const reflector = app.get(Reflector);
 
+  // Register Handlebars helpers
+  hbs.registerHelper('limit', function (arr, limit) {
+    if (!Array.isArray(arr)) return [];
+    return arr.slice(0, limit);
+  });
+
+  hbs.registerHelper('add', function (a, b) {
+    return Number(a) + Number(b);
+  });
+
   app.useGlobalInterceptors(new ResponseInterceptor(reflector));
   app.useGlobalPipes(
     new ValidationPipe({

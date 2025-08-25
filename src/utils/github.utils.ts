@@ -14,7 +14,7 @@ export class GitHubUtils {
   }
 
   /* ========== Helper để handle pagination ========== */
-  private async fetchAll<T>(
+  public async fetchAll<T>(
     url: string,
     params: Record<string, any> = {}
   ): Promise<T[]> {
@@ -25,9 +25,12 @@ export class GitHubUtils {
       const res = await this.client.get<T[]>(url, {
         params: { ...params, per_page: 100, page },
       });
+    
       results = results.concat(res.data);
       if (res.data.length < 100) break; // hết dữ liệu
       page++;
+      // Thêm delay 500ms giữa các lần gọi API để tránh bị rate limit
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     return results;
@@ -42,6 +45,10 @@ export class GitHubUtils {
   async getRepo(owner: string, repo: string) {
     const res = await this.client.get(`/repos/${owner}/${repo}`);
     return res.data;
+  }
+
+  async getRepoContributors(owner: string, repo: string) {
+    return this.fetchAll(`/repos/${owner}/${repo}/contributors`);
   }
 
   /* ================= COMMITS ================= */
@@ -78,6 +85,13 @@ export class GitHubUtils {
 
   async getPullRequestFiles(owner: string, repo: string, pull_number: number) {
     return this.fetchAll(`/repos/${owner}/${repo}/pulls/${pull_number}/files`);
+  }
+
+  async getPullRequestDiff(owner: string, repo: string, pull_number: string | number) {
+    // Xử lý giống fetchAll, trả về nội dung diff
+    const url = `https://github.com/${owner}/${repo}/pull/${pull_number}.diff`;
+    const res = await axios.get(url, { headers: { Accept: 'application/vnd.github.v3.diff' } });
+    return res.data;
   }
 
   /* ================= REVIEWS & COMMENTS ================= */
