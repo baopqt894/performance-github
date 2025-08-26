@@ -92,5 +92,8 @@ export class StatController {
     return await this.statService.getMemberActivities(username, fromParsed, toParsed);
   }
 
-
+  @Post('assigned-reviews/sync')
+  async syncAssignedReviews() {
+    return await this.statService.saveAssignedReviewsFromPRs();
+  }
 }
