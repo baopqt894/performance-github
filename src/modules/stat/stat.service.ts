@@ -277,13 +277,14 @@ export class StatService {
       if (Array.isArray(pr.pr_raw?.requested_reviewers)) {
         reviewers.push(...pr.pr_raw.requested_reviewers);
       }
-      // Tạo review entity từ reviewer
+      // Tạo review entity từ reviewer, bổ sung html_url
       const reviewEntities = reviewers.map((r: any) => ({
         review_id: `${pr.pr_id}-${r.login}`,
         pr_id: String(pr.pr_id),
         repo: pr.repo,
         owner: pr.owner,
         review_raw: r,
+        html_url: pr.pr_raw?.html_url || null
       }));
       if (reviewEntities.length) {
         await this.prReviewRepo.save(reviewEntities);
@@ -311,13 +312,14 @@ export class StatService {
     if (Array.isArray(pr?.requested_reviewers)) {
       reviewers.push(...pr.requested_reviewers);
     }
-    // Tạo review entity từ reviewer
+    // Tạo review entity từ reviewer, bổ sung html_url
     const reviewEntities = reviewers.map((r: any) => ({
       review_id: `${pr_id}-${r.login}`,
       pr_id: String(pr_id),
       repo,
       owner,
       review_raw: r,
+      html_url: pr?.html_url || null
     }));
     if (reviewEntities.length) {
       return this.prReviewRepo.save(reviewEntities);

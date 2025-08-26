@@ -37,4 +37,7 @@ export class PullRequestReviewEntity {
 
   @Column('json')
   review_raw: any;
+
+  @Column({ type: 'varchar', nullable: true })
+  html_url?: string;
 }
