@@ -37,7 +37,11 @@ import { StatModule } from './modules/stat/stat.module';
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
-      exclude: ['/performance*', '/stat*', '/api*'],
+      exclude: [
+        '/performance(.*)',
+        '/stat(.*)',
+        '/api(.*)',
+      ],
     }),
     OrganizationModule,
     MembersModule,
