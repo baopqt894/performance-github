@@ -1,3 +1,7 @@
+  /**
+   * Trả về số lượng commit, PR, review cho từng người (không tính performance)
+   */
+ 
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
@@ -130,20 +134,35 @@ export class StatService {
    * Lấy performance từ materialized view user_performance_daily nếu có, fallback sang cách cũ nếu không có dữ liệu
    */
   async getMemberPerformance(from?: string, to?: string): Promise<any[]> {
-    // Lấy danh sách tất cả member
+    // Chỉ trả về số lượng commit, PR, review cho từng người
     const members = await this.githubUtils.getOrgMembers('FoxCodeStudio');
-  
-    // Xử lý khoảng thời gian
+    const page = 1; // TODO: nhận từ query
+    const pageSize = 100; // TODO: nhận từ query
+
     let fromDate: string | undefined;
     let toDate: string | undefined;
     if (from) fromDate = new Date(String(from)).toISOString();
     if (to) toDate = new Date(String(to)).toISOString();
-    // Truy vấn 1 lần cho tất cả commit
-    const allCommits = await this.commitRepo.find();
-    // Truy vấn 1 lần cho tất cả pull request
-    const allPRs = await this.prRepo.find();
-    // Truy vấn 1 lần cho tất cả review
-    const allReviews = await this.prReviewRepo.find();
+
+    // Truy vấn commit có phân trang và lọc thời gian
+    const commitWhere: any = {};
+    if (fromDate && toDate) commitWhere.date = Between(fromDate, toDate);
+    const allCommits = await this.commitRepo.find({
+      where: commitWhere,
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    });
+    // Truy vấn pull request có phân trang và lọc thời gian
+    const allPRs = await this.prRepo.find({
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    });
+    // Truy vấn review có phân trang
+    const allReviews = await this.prReviewRepo.find({
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    });
+
     const result: any[] = [];
     const memberUsernames = members.map((m: any) => m.login);
     for (const member of members as any[]) {
@@ -153,20 +172,14 @@ export class StatService {
       const commits = allCommits.filter(c => c.author_name === username && (!fromDate || c.date >= fromDate) && (!toDate || c.date <= toDate));
       // Lọc pull request theo user và khoảng thời gian
       const prs = allPRs.filter(pr => pr.pr_raw?.user?.login === username && (!fromDate || pr.pr_raw?.created_at >= fromDate) && (!toDate || pr.pr_raw?.created_at <= toDate));
-      // Lọc review assigned theo user và khoảng thời gian
+      // Lọc review assigned theo user
       const reviews = allReviews.filter(r => r.review_id.endsWith(`-${username}`));
-      // Tính chỉ số performance
-      const commitCount = commits.length;
-      const prCount = prs.length;
-      const reviewCount = reviews.length;
-      const performance = commitCount + prCount * 2 + reviewCount;
       result.push({
         username,
         avatar,
-        performance,
-        commitCount,
-        prCount,
-        reviewCount
+        commitCount: commits.length,
+        prCount: prs.length,
+        reviewCount: reviews.length
       });
     }
 
@@ -176,14 +189,12 @@ export class StatService {
         result.push({
           username,
           avatar: member?.avatar_url || null,
-          performance: 0,
           commitCount: 0,
           prCount: 0,
           reviewCount: 0
         });
       }
     }
-    result.sort((a, b) => b.performance - a.performance);
     return result;
   }
 
@@ -325,6 +336,75 @@ export class StatService {
       return this.prReviewRepo.save(reviewEntities);
     }
     return [];
+  }
+
+   async getMemberStats(
+    from?: string,
+    to?: string,
+    options?: { page?: number; pageSize?: number }
+  ): Promise<any[]> {
+    const page = options?.page ?? 1;
+    const pageSize = options?.pageSize ?? 100;
+    const members = await this.githubUtils.getOrgMembers('FoxCodeStudio');
+    let fromDate: string | undefined;
+    let toDate: string | undefined;
+    if (from) fromDate = new Date(String(from)).toISOString();
+    if (to) toDate = new Date(String(to)).toISOString();
+
+    // Truy vấn commit có phân trang và lọc thời gian
+    const commitWhere: any = {};
+    if (fromDate && toDate) commitWhere.date = Between(fromDate, toDate);
+    const allCommits = await this.commitRepo.find({
+      where: commitWhere,
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    });
+    // Truy vấn pull request có phân trang và lọc thời gian
+    const allPRs = await this.prRepo.find({
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    });
+    // Truy vấn review có phân trang
+    const allReviews = await this.prReviewRepo.find({
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    });
+
+    const result: any[] = [];
+    const memberUsernames = members.map((m: any) => m.login);
+    for (const member of members as any[]) {
+      const username = member.login;
+      const avatar = member.avatar_url;
+      // Lọc commit theo user và khoảng thời gian
+      const commits = allCommits.filter(c => c.author_name === username && (!fromDate || c.date >= fromDate) && (!toDate || c.date <= toDate));
+      // Lọc pull request theo user và khoảng thời gian
+      const prs = allPRs.filter(pr => pr.pr_raw?.user?.login === username && (!fromDate || pr.pr_raw?.created_at >= fromDate) && (!toDate || pr.pr_raw?.created_at <= toDate));
+      // Lọc review assigned theo user
+      const reviews = allReviews.filter(r => r.review_id.endsWith(`-${username}`));
+      result.push({
+        username,
+        avatar,
+        commitCount: commits.length,
+        prCount: prs.length,
+        reviewCount: reviews.length
+      });
+    }
+
+    for (const username of memberUsernames) {
+      if (!result.find(r => r.username === username)) {
+        const member = members.find((m: any) => m.login === username) as any;
+        result.push({
+          username,
+          avatar: member?.avatar_url || null,
+          commitCount: 0,
+          prCount: 0,
+          reviewCount: 0
+        });
+      }
+    }
+    // Sắp xếp giảm dần theo tổng số lượng
+    result.sort((a, b) => (b.commitCount + b.prCount + b.reviewCount) - (a.commitCount + a.prCount + a.reviewCount));
+    return result;
   }
 
 }

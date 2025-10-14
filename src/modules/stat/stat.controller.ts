@@ -1,3 +1,4 @@
+  
 import { StatCron } from './stat.cron';
 
 import { Controller, Get, Post, Body, Query } from '@nestjs/common';
@@ -22,6 +23,35 @@ export class StatController {
     }
     return this.statService.getAllCommits();
   }
+
+  @Get('member-stats')
+async getMemberStats(
+  @Query('from') from?: string,
+  @Query('to') to?: string,
+  @Query('page') page?: number,
+  @Query('pageSize') pageSize?: number,
+) {
+  function parseDate(dateStr?: string): string | undefined {
+    if (!dateStr) return undefined;
+    const match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) {
+      const [_, day, month, year] = match;
+      return new Date(`${year}-${month}-${day}T00:00:00Z`).toISOString();
+    }
+    return dateStr;
+  }
+
+  const fromParsed = parseDate(from);
+  const toParsed = parseDate(to);
+  const pageNumber = Number(page) || 1;
+  const sizeNumber = Number(pageSize) || 10;
+
+  return await this.statService.getMemberStats(fromParsed, toParsed, {
+    page: pageNumber,
+    pageSize: sizeNumber,
+  });
+}
+
 
   @Post('commits')
   async saveCommits(@Body() body: { commits: any[], repo: string, owner: string }) {
